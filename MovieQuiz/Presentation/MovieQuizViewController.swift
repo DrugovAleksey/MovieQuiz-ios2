@@ -1,7 +1,7 @@
 import UIKit
 import Foundation
 
-final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
+class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     @IBOutlet private weak var imageView: UIImageView!
     
@@ -46,10 +46,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var currentQuestionIndex : Int = 0
     
     // переменная счетчика правильных ответов
-    private var currentAnswer: Int = 0
+    var currentAnswer: Int = 0
     
     // переменная счетчика правильных ответов за все игры
-    private var correctAnswerAll: Double = 0
+    var correctAnswerAll: Double = 0
     
     // переменная счетчика количества сыгрынх игр
     private var currentQuiz: Int = 0
@@ -57,10 +57,15 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     // средняя точность correctAnswerAll / (questions.count * 10)
     private var mediumAnswerAll: Double = 0
     
+    private var alertPresenter = AlertPresenter()
+//    private let presenter = AlertPresenter()  // Инициализация при создании класса
+
+    var statisticService = StatisticService()
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        statisticService = StatisticService()
         questionFactory = QuestionFactory(delegate: self)
         questionFactory?.requestNextQuestion()
     }
@@ -139,7 +144,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     // метод перехода в один из сценариев : либо в следующий вопрос, либо в результаты квиза. Этот метод ничего не получает и ничего не возвращает
     private func showNextQuestionOrResults() {
         if currentQuestionIndex == questionAmount - 1 {
-            // здесь результаты квиза
+            // Сохраняем результаты текущего раунда
+            statisticService.store(correct: currentAnswer, total: questionAmount)
+            
+            // здесь результаты текущего квиза
             currentQuiz += 1
             mediumAnswerAll = correctAnswerAll / Double(questionAmount * currentQuiz) * 100
             print ("currentAnswer = ",currentAnswer)
@@ -147,8 +155,21 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             print ("questions.count = ",questions.count)
             print ("mediumAnswerAll = ",mediumAnswerAll)
             print ("currentQuiz = ", currentQuiz)
-            //show(quiz: quizRusultsViewModel)
-            alert()
+            
+            // Формируем модель для отображения результатов
+            let bestGame = statisticService.bestGame
+            let formattedDate = DateFormatter.iso8601.string(from: bestGame?.date ?? Date())
+            // вызываем конструктор модели и передаем туда данные из макета
+            let quizRusultsViewModel = QuizResultsViewModel(
+                title: "Раунд окончен", // Заголовок
+                text: "Ваш результат: \(currentAnswer)/\(questionAmount) \n" +
+                "Количество сыгранных квизов: \(statisticService.gamesCount) \n" +
+                "Рекорд: \(bestGame?.correct ?? 0)/\(bestGame?.total ?? 0) \(formattedDate) \n" +
+                "Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy * 100))%", // Сообщение
+                buttonText: "Сыграть еще раз?"
+            )
+            show(quiz: quizRusultsViewModel)
+            //alert()
         } else {
             print("Следующий вопрос")
             currentQuestionIndex += 1
@@ -193,37 +214,39 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     // MARK: - resetQuiz()
     // метод сброса игры
     func resetQuiz() {
+        // Сброс игровых счётчиков
         currentAnswer = 0
-        currentQuestionIndex = 0 // задаем в минус для того , чтобы при переходе в showNextQuestionOrResults() перед выполнением идет увеличение настоящего параметра на единицу (кривенько, но можно)
-        //let firstQuestion = questions[currentQuestionIndex]
-        questionFactory?.requestNextQuestion() // Запрашиваем первый вопрос
+        currentQuestionIndex = 0
+        correctAnswerAll = 0  // Если используете этот счётчик
+        mediumAnswerAll = 0   // Если используете этот счётчик
 
-       // showNextQuestionOrResults()
+        // Полный сброс статистики
+       // statisticService.resetStatistics()
+
+        // Перезапрашиваем первый вопрос через существующую фабрику
+        questionFactory?.requestNextQuestion()
+
+
+        // Сброс визуальных элементов
+        imageView.image = nil
+        textLabel.text = "Загрузка вопроса..."
+        counterLabel.text = "0/10"
+        imageView.layer.borderColor = UIColor(named: "YP Background (iOS)")?.cgColor
     }
     
-    // вызываем конструктор модели и передаем туда данные из макета
-    let quizRusultsViewModel = QuizResultsViewModel(
-        title: "Макароны",
-        text: "Рецепт приготовления",
-        buttonText: "Жмакни меня!"
-    )
+   
     // MARK: - show(quiz result: QuizResultsViewModel)
     // приватный метод для показа результатов раунда квиза
     // принмает вью модель QuizResultsViewModel и ничего не возвращает
-    private func show(quiz result: QuizResultsViewModel) {
+    func show(quiz result: QuizResultsViewModel) {
         
-        let alert = UIAlertController(
-            title: result.title,
-            message: result.text,
-            preferredStyle: .alert
-        )
-        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
-            self?.resetQuiz()
+        let model = AlertModel(title: result.title, message: result.text, buttonText: result.buttonText) { [weak self] in
+            guard let self = self else { return }
         }
+        let buttonText = model.buttonText
         
-        alert.addAction(action)
-        
-        self.present(alert, animated: true, completion: nil)
+        alertPresenter.show(in: self, model: model)
+        resetQuiz()
     }
 }
 
