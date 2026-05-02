@@ -12,7 +12,7 @@ class QuestionFactory: QuestionFactoryProtocol {
     private var questionsFromFactory: [QuizQuestion]
     
     weak var delegate: QuestionFactoryDelegate?
-    // Мы объявляем функцию requestNextQuestion теперь будет передавать вопрос делегату QuestionFactoryDelegate в функцию didReceiveNextQuestion(question:)
+    // Мы объявляем делегат, функция requestNextQuestion теперь будет передавать вопрос делегату QuestionFactoryDelegate в функцию didReceiveNextQuestion(question:)
     
     init(delegate: QuestionFactoryDelegate?){
         self.questionsFromFactory = questions // Используем глобальный массив
@@ -21,7 +21,7 @@ class QuestionFactory: QuestionFactoryProtocol {
     }
     
     
-    
+    // MARK: - requestNextQuestion() функция формирует следующий вопрос
     func requestNextQuestion() {
         guard let index = (0..<questionsFromFactory.count).randomElement() else {
             delegate?.didReceiveNextQuestion(question: nil)
@@ -30,6 +30,6 @@ class QuestionFactory: QuestionFactoryProtocol {
 
         let question = questionsFromFactory[index]
         delegate?.didReceiveNextQuestion(question: question)
-        //return question
     }
 }
+

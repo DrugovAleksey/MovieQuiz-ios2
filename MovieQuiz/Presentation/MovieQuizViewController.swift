@@ -21,6 +21,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         print("Yes нажата \n")
     }
     
+    
     @IBAction func noButtonClicked(_ sender: Any) {
         let givenAnswer = false // эта константа говорит, Нет
         
@@ -61,8 +62,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        questionFactory = QuestionFactory(delegate: self)
-        questionFactory?.requestNextQuestion()
+        questionFactory = QuestionFactory(delegate: self) // инициализация фабрики
+        questionFactory?.requestNextQuestion() // получение первого вопроса
     }
     
     // MARK: - QuestionFactoryDelegate
@@ -102,7 +103,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         textLabel.text = step.question
         counterLabel.text = step.questionNumber
         
+        // Важно! При первой загрузке подгружаются эти параметры рамки
+        imageView.layer.masksToBounds = true // даем разрешение на рисование рамки
+        imageView.layer.cornerRadius = 20
+        imageView.layer.borderWidth = 7
         imageView.layer.borderColor = UIColor(named: "YP Background (iOS)")?.cgColor
+        imageView.clipsToBounds = true // Обрезать по рамке!!!!
     }
     
     // MARK: - showAnswerResult(isCorrect: Bool, quizQuestion: QuizQuestion)
