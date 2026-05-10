@@ -327,6 +327,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         } catch {
             print("❌ Ошибка при синхронизации UserDefaults: \(error)")
         }
+        let buttonText = model.buttonText
         
         for (key, value) in dictionary {
             print("\(key) - \(value)")
