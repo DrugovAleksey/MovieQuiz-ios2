@@ -2,17 +2,41 @@
 //  GameResult.swift
 //  MovieQuiz
 //
-//  Created by Flymetric on 19.04.2026.
+//  Created by Flymetric on 07.05.2026.
 //
 import Foundation
 
-struct GameResult {     // результаты текущей игры
-    var correct: Int    // количество правильных ответов
-    var total: Int      // количество вопросов квиза текущего
-    var date: Date      // дата завершения раунда
+struct GameResult {
+    var correct: Int
+    var total: Int
+    var date: String
     
-    // метод сравнения по количеству верных ответов
-    func isBetterThan (_ another: GameResult) -> Bool {
-        correct > another.correct // сравнивает текущий с новым GameResult
+    // Инициализатор для конкретной даты
+    init(correct: Int, total: Int, date: Date) {
+        self.correct = correct
+        self.total = total
+        self.date = DateFormatter.customFormat.string(from: date) // используем переданную date
     }
+    
+    // Инициализатор для текущей даты
+    init(correct: Int, total: Int) {
+        self.correct = correct
+        self.total = total
+        self.date = DateFormatter.customFormat.string(from: Date()) // текущая дата
+    }
+    
+    func isBetterThen(_ another: GameResult) -> Bool {
+        correct > another.correct
+    }
+}
+
+// преобразуем формат даты
+extension DateFormatter {
+    static let customFormat: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm' 'dd.MM.yyyy"
+        formatter.timeZone = TimeZone(identifier: "Europe/Moscow")
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
 }

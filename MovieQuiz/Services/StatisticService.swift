@@ -1,119 +1,106 @@
 //
-//  Statistic.swift
+//  StatisticService.swift
 //  MovieQuiz
 //
-//  Created by Flymetric on 19.04.2026.
+//  Created by Flymetric on 07.05.2026.
 //
 import Foundation
 
 final class StatisticService {
-    private let storage: UserDefaults = .standard
-
-    var gamesCount: Int {
-        get {
-            storage.integer(forKey: "gamesCount")
-        }
-        set {
-            storage.set(newValue, forKey: "gamesCount")
-        }
-    }
     
-    
-    var totalAccuracy: Double {
-        get {
-            storage.double(forKey: "totalAccuracy")
-        }
-        set {
-            storage.set(newValue, forKey: "totalAccuracy")
-        }
-    }
-    
-    var bestGame: GameResult? {
-        get {
-            let correct = storage.integer(forKey: "bestGame_correct")
-            let total = storage.integer(forKey: "bestGame_total")
-            guard let dateString = storage.string(forKey: "bestGame_date") else {
-                print("❌ bestGame_date не найден в UserDefaults")
-                return nil
-            }
-            guard let date = DateFormatter.iso8601.date(from: dateString) else {
-                print("❌ Не удалось распарсить дату: \(dateString)")
-                return nil
-            }
-            print("✅ Прочитали дату: \(dateString) → \(date)")
-            return GameResult(correct: correct, total: total, date: date)
-        }
-        set {
-            guard let newValue = newValue else {
-                storage.removeObject(forKey: "bestGame_correct")
-                storage.removeObject(forKey: "bestGame_total")
-                storage.removeObject(forKey: "bestGame_date")
-                print("✅ bestGame очищен из UserDefaults")
-                return
-            }
-            storage.set(newValue.correct, forKey: "bestGame_correct")
-            storage.set(newValue.total, forKey: "bestGame_total")
-            let dateString = DateFormatter.iso8601.string(from: newValue.date)
-            storage.set(dateString, forKey: "bestGame_date") // Сохраняем строку
-            print("✅ Сохранили дату: \(newValue.date) → \(dateString)")
-        }
-    }
-    
-    // метод для полного сброса
-    func resetStatistics() {
-        // Очищаем все ключи из UserDefaults
-        storage.removeObject(forKey: "gamesCount")
-        storage.removeObject(forKey: "totalAccuracy")
-        storage.removeObject(forKey: "bestGame_correct")
-        storage.removeObject(forKey: "bestGame_total")
-        storage.removeObject(forKey: "bestGame_date")
-
-        
-        // Дополнительно: можно явно установить значения по умолчанию
-        gamesCount = 0
-        totalAccuracy = 0.0
-        bestGame = nil
-    }
 }
 
 extension StatisticService: StatisticServiceProtocol {
     
-    func store(correct count: Int, total amount: Int) {
-        gamesCount += 1
-        
-        if amount > 0 {
-            // текущая точность
-            let currentAccuracy = Double(count) / Double (amount)
-            // полная точность с начала времен будет
-            totalAccuracy = (totalAccuracy * Double(gamesCount - 1) + currentAccuracy) / Double(gamesCount)
+    private enum Keys: String {
+        case gamesCount             // счетчик сыгранных игр
+        case bestGameCorrect        // количество правильных ответов в лучшей игре
+        case bestGameTotal          // общее количество вопросов в лучшей игре
+        case bestGameDate           // дата лучшей игры
+        case totalCorrectAnswers    // общее количество правильных ответов за все игры
+        case totalQuestionsAsked    // общее количество вопросов, заданных за все игры
+    }
+    
+    var gamesCount: Int {
+        get {
+            UserDefaults.standard.integer(forKey: Keys.gamesCount.rawValue)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Keys.gamesCount.rawValue)
+        }
+    }
+    
+    var bestGame: GameResult {
+        get {
+            let correct = UserDefaults.standard.integer(forKey: Keys.bestGameCorrect.rawValue)
+            let total = UserDefaults.standard.integer(forKey: Keys.bestGameTotal.rawValue)
             
-            print ("count = ", count)
-            print ("amount = ", amount)
-
-            print ("gamesCount = ", gamesCount)
-            print ("currentAccuracy = ", currentAccuracy)
-            print ("totalAccuracy = ", totalAccuracy)
-        }
-        
-        let newGame = GameResult(correct: count, total: amount, date: Date())
-        
-        if let currentBest = bestGame {
-            if newGame.correct > currentBest.correct {
-                bestGame = newGame
+            guard let dateString = UserDefaults.standard.string(forKey: Keys.bestGameDate.rawValue),
+                  let dateS = DateFormatter.customFormat.date(from: dateString)
+            else {
+                return GameResult(correct: 0, total: 0) // используем текущий инициализатор
             }
-        } else {
-            bestGame = newGame
+            return GameResult(
+                correct: correct,
+                total: total,
+                date: dateS
+            ) // используем конкретный инициализатор
         }
+        set {
+            UserDefaults.standard.set(newValue.correct, forKey: Keys.bestGameCorrect.rawValue)
+            UserDefaults.standard.set(newValue.total, forKey: Keys.bestGameTotal.rawValue)
+            UserDefaults.standard.set(newValue.date, forKey: Keys.bestGameDate.rawValue)
+        }
+    }
+    
+    var totalCorrectAnswers: Int {
+        get {
+            UserDefaults.standard.integer(forKey: Keys.totalCorrectAnswers.rawValue)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Keys.totalCorrectAnswers.rawValue)
+        }
+    }
+    
+    var totalQuestionsAsked: Int {
+        get {
+            UserDefaults.standard.integer(forKey: Keys.totalQuestionsAsked.rawValue)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Keys.totalQuestionsAsked.rawValue)
+        }
+    }
+    
+    var totalAccuracy: Double {
+        let correct = totalCorrectAnswers
+        let total = totalQuestionsAsked
+        guard total > 0 else { return 0 }
+        return Double(correct) / Double(total) * 100
+    }
+    
+    // Функция сохранения статистики
+    func store(correct count: Int, total amount: Int) {
+        // добавляем количество игр, так как игра сыграна
+        gamesCount += 1
+        // обновляем общие статистики
+        totalCorrectAnswers += count // в общую статистику правильных ответов добавляем текущиее количиество правильных ответов
+        totalQuestionsAsked += amount // в общую статистику всех ответов добавляем дополнительное количество ответов, которые прошли в последнем раунде
+        
+        // Проверяем, является ли текущаяя игра лучшей
+        let currentBest = bestGame
+        if count > currentBest.correct || (count == currentBest.correct && amount < currentBest.total) { bestGame = GameResult(
+            correct: count,
+            total: amount
+            )
+        }
+    }
+    
+    // сброс статистики перед началом игры
+    func resetStatistics() {
+        gamesCount = 0
+        bestGame = GameResult(correct: 0, total: 0, date: Date())
+        totalCorrectAnswers = 0
+        totalQuestionsAsked = 0
     }
 }
 
-extension DateFormatter {
-    static let iso8601: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd.MM.yyyy HH:mm:ss" // 24-часовой формат
-        formatter.locale = Locale(identifier: "ru_RU") // локаль для корректного отображения
-        formatter.timeZone = TimeZone.current // Текущий часовой пояс
-        print("✅ DateFormatter настроен: \(formatter.dateFormat)")
-        return formatter
-    }()
-}

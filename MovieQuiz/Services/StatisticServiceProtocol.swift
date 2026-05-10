@@ -2,15 +2,15 @@
 //  StatisticServiceProtocol.swift
 //  MovieQuiz
 //
-//  Created by Flymetric on 19.04.2026.
+//  Created by Flymetric on 07.05.2026.
 //
-import Foundation
 
 protocol StatisticServiceProtocol {
-    var totalAccuracy: Double {get} // средняя точность за все игры
-    var gamesCount: Int {get}       // результат текущей игры
-    var bestGame: GameResult? {get}  // лучшая игра
-
+    var gamesCount: Int { get }
+    var bestGame: GameResult { get }
+    var totalAccuracy: Double { get }
+    
     // метод для сохранения текущего результата игры
     func store(correct count: Int, total amount: Int)
 }
+
