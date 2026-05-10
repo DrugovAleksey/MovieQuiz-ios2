@@ -1,7 +1,9 @@
 import UIKit
+//import AVFAudio
 import Foundation
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
+
     
     @IBOutlet private weak var imageView: UIImageView!
     
@@ -9,6 +11,11 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     @IBOutlet private weak var counterLabel: UILabel!
     
+    @IBOutlet weak var activityIndicatorView: UIActivityIndicatorView!
+    
+    @IBOutlet weak var noButtonUIButton: UIButton!
+    
+    @IBOutlet weak var yesButtonUIButton: UIButton!
     
     @IBAction func yesButtonClicked(_ sender: Any) {
         
@@ -19,6 +26,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         showAnswerResult(isCorrect: givenAnswer, quizQuestion: currentQuestion)
         print("YES currentQuestion: ", currentQuestion)
         print("Yes нажата \n")
+        
+        yesButtonUIButton.isEnabled = false
+        
+        QueueSoundManage.shared.playSoundsInSequence(with: ["accepted"], fileExtension: "wav")
     }
     
     
@@ -30,6 +41,13 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         showAnswerResult(isCorrect: givenAnswer, quizQuestion: currentQuestion)
         print("NO currentQuestion: ", currentQuestion)
         print("No нажата \n")
+        
+        noButtonUIButton.isEnabled = false
+        
+        QueueSoundManage.shared.playSoundsInSequence(with: ["accepted"], fileExtension: "wav")
+        
+        // блокируем кнопку, чтобы ее нельзя было нажать несколько раз
+        
     }
     
     // фабрика вопросов. Контроллер будет обращаться к ней за вопросами
@@ -46,27 +64,40 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     // задаем счетчик вопросов
     private var currentQuestionIndex : Int = 0
     
-    // переменная счетчика правильных ответов
-    private var currentAnswer: Int = 0
+    // создаем экземпляр класса АлертаПрезентера в который будем выводить все алерты
+    private var alertPresenter = AlertPresenter()
     
-    // переменная счетчика правильных ответов за все игры
-    private var correctAnswerAll: Double = 0
+    // создаем экземпляр структуры ГеймРезульт в воторый будем вносить текущие изменения по ходу игры
+    private var gameResult = GameResult(correct: 0, total: 0, date: Date())
     
-    // переменная счетчика количества сыгрынх игр
-    private var currentQuiz: Int = 0
-    
-    // средняя точность correctAnswerAll / (questions.count * 10)
-    private var mediumAnswerAll: Double = 0
-    
+    private var statisticService = StatisticService()
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        // ОБЯЗАТЕЛЬНО: устанавливаем ДО вызова loadFromFile иначе алерт не покажется
+        ErrorsHandler.currentViewController = self
+        
+        // Инициализируем сервис по статистике (переменная типа: протокол)
+        statisticService = StatisticService()
+       
+        // Сразу врубаем индикатор активности загрузки
+        activityIndicatorView.isHidden = false
+        activityIndicatorView.startAnimating()
+        
         questionFactory = QuestionFactory(delegate: self) // инициализация фабрики
-        questionFactory?.requestNextQuestion() // получение первого вопроса
+        
+        // Ниже источники данных. Выбираем один остальные коментируем.
+        //questionFactory?.requestNextQuestion()  // Источник данных - МОК!
+        //questionFactory?.loadFromFile(in: self) // Источник данных - Файл!
+        questionFactory?.loadFromNetwork(in: self) // Источник данных - Сеть!
+        
+        activityIndicatorView.stopAnimating()
     }
     
     // MARK: - QuestionFactoryDelegate
+    // эта функция принимает question (вопрос) и выводит его на экран
     func didReceiveNextQuestion(question: QuizQuestion?) {
         // проверим, что вопрос не nil
         guard let question = question else {
@@ -81,11 +112,15 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
     }
     
+    func didLoadFromFile() {
+        print("didLoadFromFile() запустилась в MovieQuizViewController. Что она здесь может выполнять!")
+    }
+    
     
     // MARK: - convert(model: QuizQuestion) -> QuizStepViewModel
     // функци конвертации из структуры вопроса QuizQuestion -> во вью модель экрана QuizStepViewModel
     func convert(model: QuizQuestion) -> QuizStepViewModel {
-        let image = UIImage(named: model.image) ?? UIImage()
+        let image = model.image
         let question = model.text
         let questionNumber = "\(currentQuestionIndex + 1)/\(questionAmount)"
         print ("questionNumber -", questionNumber)
@@ -102,6 +137,10 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         imageView.image = step.image
         textLabel.text = step.question
         counterLabel.text = step.questionNumber
+        
+        // Разблокируем кнопки
+        noButtonUIButton.isEnabled = true
+        yesButtonUIButton.isEnabled = true
         
         // Важно! При первой загрузке подгружаются эти параметры рамки
         imageView.layer.masksToBounds = true // даем разрешение на рисование рамки
@@ -125,11 +164,13 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         imageView.clipsToBounds = true // Обрезать по рамке!!!!
         
         if isCorrect == correctAnswer {
-            currentAnswer += 1
-            correctAnswerAll += 1
+            //currentAnswer += 1
+            gameResult.correct += 1
+            gameResult.total += 1
             imageView.layer.borderColor = UIColor(named: "YP Green (iOS)")?.cgColor
             print("ответ правильный")
         } else {
+            gameResult.total += 1
             imageView.layer.borderColor = UIColor(named: "YP Red (iOS)")?.cgColor
             print("ответ НЕ правильный")
         }
@@ -146,90 +187,176 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private func showNextQuestionOrResults() {
         if currentQuestionIndex == questionAmount - 1 {
             // здесь результаты квиза
-            currentQuiz += 1
-            mediumAnswerAll = correctAnswerAll / Double(questionAmount * currentQuiz) * 100
-            print ("currentAnswer = ",currentAnswer)
-            print ("correctAnswerAll = ",correctAnswerAll)
+            
+            statisticService.store(correct: gameResult.correct, total: gameResult.total)
+            
+            
+            
+            // средняя точность правильных ответов
+            var totalAccuracy = statisticService.totalAccuracy
+            //mediumAnswerAll = correctAnswerAll / Double(questionAmount * currentQuiz) * 100
+           // print ("currentAnswer = ",currentAnswer)
+         //   print ("correctAnswerAll = ",correctAnswerAll)
             print ("questions.count = ",questions.count)
-            print ("mediumAnswerAll = ",mediumAnswerAll)
-            print ("currentQuiz = ", currentQuiz)
-            //show(quiz: quizRusultsViewModel)
-            alert()
+          //  print ("mediumAnswerAll = ",mediumAnswerAll)
+           // print ("currentQuiz = ", currentQuiz)
+            
+            print ("gameCount = ",statisticService.gamesCount)
+            print ("bestGame = ",statisticService.bestGame)
+//            print ("bestGameTotal = ",statisticService.total)
+//            print ("bestGameDate = ",statisticService.bestGameDate)
+            print ("totalCorrectAnswers = ",statisticService.totalCorrectAnswers)
+            print ("totalQuestionsAsked = ",statisticService.totalQuestionsAsked)
+            print ("totalAccuracy = ",statisticService.totalAccuracy)
+            let bestGameTotal = statisticService.bestGame.isBetterThen(gameResult)
+            print ("bestGameTotal = ", bestGameTotal)
+            
+            let bestGameDate = statisticService.bestGame.date
+            print ("bestGameDate = ", bestGameDate)
+            
+            showAlert()
+           
         } else {
             print("Следующий вопрос")
             currentQuestionIndex += 1
+            
             // идем в состояние "вопрос показан"
             // обзаательно self!!!!! из за этого произошла рассинхронизация
-            questionFactory?.requestNextQuestion()
-//            guard let currentQuestion = currentQuestion else { return }
-//            
-//            print("nextQuestion: ", currentQuestion)
-//            let viewModel = convert(model: currentQuestion)
-//            
-//            show(quiz: viewModel)
+            self.questionFactory?.requestNextQuestion()
+
         }
     }
     
-    // MARK: - alert()
-    // Алерт!
-    func alert() {
-        let alert = UIAlertController(
+    // MARK: - showAlert()
+    // приватный метод для показа результатов раунда квиза
+    // принмает вью модель QuizResultsViewModel и ничего не возвращает
+    private func showAlert() {
+        
+        QueueSoundManage.shared.playSoundsInSequence(with: ["alert", "activated"], fileExtension: "wav")
+        
+        print ("\n При вызове финишного Алерта")
+        print("gameResult.correct =",gameResult.correct,
+              "gameResult.total =", gameResult.total,
+              "gameResult.date =", gameResult.date)
+        
+        print("gameResult.isBetterThen(gameResult) =", gameResult.isBetterThen(gameResult))
+        
+        print("bestGame = ", statisticService.bestGame)
+        let bestGameTotal = statisticService.bestGame.isBetterThen(gameResult)
+        print ("bestGameTotal = ", bestGameTotal)
+        let bestGameDate = statisticService.bestGame.date
+        print ("bestGameDate = ", bestGameDate)
+
+        print("currentQuestionIndex =", currentQuestionIndex)
+        print("questionAmount =", questionAmount)
+        print("questions.count =", questions.count)
+        print("gameCount =", statisticService.gamesCount)
+
+        print ("totalCorrectAnswers = ",statisticService.totalCorrectAnswers)
+        print ("totalQuestionsAsked = ",statisticService.totalQuestionsAsked)
+        print ("totalAccuracy = ",statisticService.totalAccuracy)
+        
+        let model = AlertModel(
             title: "Раунд окончен", // Заголовок
-            message: "Ваш результат: \(currentAnswer)/\(questionAmount) \n" +
-            "Количество сыгранных квизов: \(currentQuiz) \n" +
-            "Средняя точность: \(String(format: "%.2f", mediumAnswerAll))%", // Сообщение
-            preferredStyle: .alert // может быть .alert или .actionSheet
-        )
-        
-        // создаем кнопку с действием для алерта. В замыкании пишем, что должно происходить с алертом по нажатию
-        let action = UIAlertAction(
-            title: "Сыграть еще раз.",
-            style: .default) { [weak self] _ in
-                print("Кнопка алерта нажата!")
-                self?.resetQuiz()
+            message: "Ваш результат: \(gameResult.correct)/\(gameResult.total)\n" +
+            "Количество сыгранных квизов: \(statisticService.gamesCount) \n" +
+            "Рекорд: \(statisticService.bestGame.correct)/\(statisticService.bestGame.total) (\(statisticService.bestGame.date) \n" +
+            "Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy))%", // Сообщение
+            buttonText: "Сыграть еще раз.",
+            buttonText2: "Сброс статистики.",
+            completion: {
+                print("Кнопка Сыграть еще раз нажата!")
+                self.resetQuiz()
+                
+                QueueSoundManage.shared.playSoundsInSequence(with: ["accepted"], fileExtension: "wav")
+            },
+            completion2: { [self] in
+                print("Кнопка СБРОСА нажата!")
+                resetStatistic()
+                
+                QueueSoundManage.shared.playSoundsInSequence(with: ["accepted"], fileExtension: "wav")
             }
-        
-        // добавляем в алерт кнопку
-        alert.addAction(action)
-        
-        // показываем всплывающее окно
-        self.present(alert, animated: true, completion: nil)
+        )
+        alertPresenter.alert(in: self, model: model)
     }
+    
     
     // MARK: - resetQuiz()
     // метод сброса игры
     func resetQuiz() {
-        currentAnswer = 0
-        currentQuestionIndex = 0 // задаем в минус для того , чтобы при переходе в showNextQuestionOrResults() перед выполнением идет увеличение настоящего параметра на единицу (кривенько, но можно)
-        //let firstQuestion = questions[currentQuestionIndex]
-        questionFactory?.requestNextQuestion() // Запрашиваем первый вопрос
-
-       // showNextQuestionOrResults()
+        // сбрасываем на ноль текущий счетчик уже заданных вопросов
+        currentQuestionIndex = 0
+        
+        // сбрасываем gameResult
+        gameResult = GameResult(correct: 0, total: 0, date: Date())
+        
+        // Запрашиваем первый вопрос из уже загруженных вопросов
+        questionFactory?.requestNextQuestion()
     }
     
-    // вызываем конструктор модели и передаем туда данные из макета
-    let quizRusultsViewModel = QuizResultsViewModel(
-        title: "Макароны",
-        text: "Рецепт приготовления",
-        buttonText: "Жмакни меня!"
-    )
-    // MARK: - show(quiz result: QuizResultsViewModel)
-    // приватный метод для показа результатов раунда квиза
-    // принмает вью модель QuizResultsViewModel и ничего не возвращает
-    private func show(quiz result: QuizResultsViewModel) {
+    
+    // MARK: - resetStatistic (полный сброс статистики)
+    func resetStatistic() {
+        // сбрасываем на ноль текущий счетчик показанных вопросов
+        currentQuestionIndex = 0
         
-        let alert = UIAlertController(
-            title: result.title,
-            message: result.text,
-            preferredStyle: .alert
-        )
-        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
-            self?.resetQuiz()
+        // сбрасываем текущий результат игры gameResult
+        gameResult = GameResult(correct: 0, total: 0, date: Date())
+        
+        // очищаем статистику через сервис
+        statisticService.resetStatistics()
+        
+        print ("✅ Статистика успешно сброшена!")
+
+        // для того, чтобы все потереть нужно сначала выгрузить все из памяти, а потом все прогнать через цикл с обнулением
+       // func dictionaryRepresentation() -> [String : Any]
+        
+        // получаем словарь всех значений
+        let defaults = UserDefaults.standard
+        
+        let dictionary = defaults.dictionaryRepresentation()
+        
+        dictionary.keys.forEach { key in
+            defaults.removeObject(forKey: key)
         }
         
-        alert.addAction(action)
+        // принудительно сохраняем изменения в UserDefaults
+        do {
+            try defaults.synchronize()
+            print("✅ Статистика успешно сброшена и синхронизирована!")
+        } catch {
+            print("❌ Ошибка при синхронизации UserDefaults: \(error)")
+        }
         
-        self.present(alert, animated: true, completion: nil)
+        for (key, value) in dictionary {
+            print("\(key) - \(value)")
+        }
+        
+        print ("\n После нажатия кнопки resetStatistic")
+        print("gameResult.correct =",gameResult.correct,
+              "gameResult.total =", gameResult.total,
+              "gameResult.date =", gameResult.date)
+        
+        print("gameResult.isBetterThen(gameResult) =", gameResult.isBetterThen(gameResult))
+        
+        print("bestGame = ", statisticService.bestGame)
+        let bestGameTotal = statisticService.bestGame.isBetterThen(gameResult)
+        print ("bestGameTotal = ", bestGameTotal)
+        let bestGameDate = statisticService.bestGame.date
+        print ("bestGameDate = ", bestGameDate)
+
+        print("currentQuestionIndex =", currentQuestionIndex)
+        print("questionAmount =", questionAmount)
+        print("questions.count =", questions.count)
+        print("gameCount =", statisticService.gamesCount)
+
+        print ("totalCorrectAnswers = ",statisticService.totalCorrectAnswers)
+        print ("totalQuestionsAsked = ",statisticService.totalQuestionsAsked)
+        print ("totalAccuracy = ",statisticService.totalAccuracy)
+
+        
+        // Запрашиваем первый вопрос из уже загруженных вопросов
+        questionFactory?.requestNextQuestion()
     }
 }
 
