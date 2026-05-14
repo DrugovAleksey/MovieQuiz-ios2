@@ -9,6 +9,7 @@ import UIKit
 
 protocol QuestionFactoryProtocol {
     func requestNextQuestion()
+    func loadFromMock()
     func loadFromFile(in viewController: UIViewController)       // Вносим функцию, т.к. этот протокол контролирует фабрику
     func loadFromNetwork(in viewController: UIViewController)
 }

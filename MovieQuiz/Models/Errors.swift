@@ -64,11 +64,16 @@ struct ErrorsHandler {
             return AlertModel(
                 title: "Ошибка!",
                 message: "Не найден файл JSON с вопросами! \n" +
-                "Запустить МОК-данные из массива?",
+                "Запустить МОК-данные из массива" +
+                "или запустить данные из Сети?",
                 buttonText: "Запустить МОК-данные.",
+                buttonText2: "Запустить данные из сети.",
                 buttonText3: "Полная отмена!",
                 completion: {
-                    questionFactory.requestNextQuestion()
+                    questionFactory.loadFromMock()
+                },
+                completion2: {
+                    questionFactory.loadFromNetwork(in: viewController)
                 },
                 completion3: {
                     alertPresenter.censelAllAlerts()
@@ -92,7 +97,7 @@ struct ErrorsHandler {
                     questionFactory.loadFromFile(in: viewController)
                 },
                 completion2: {
-                    questionFactory.requestNextQuestion()
+                    questionFactory.loadFromMock()
                 },
                 completion3: {
                     alertPresenter.censelAllAlerts()
@@ -116,7 +121,7 @@ struct ErrorsHandler {
                     questionFactory.loadFromFile(in: viewController)
                 },
                 completion2: {
-                    questionFactory.requestNextQuestion()
+                    questionFactory.loadFromMock()
                 },
                 completion3: {
                     alertPresenter.censelAllAlerts()
@@ -139,7 +144,7 @@ struct ErrorsHandler {
                     questionFactory.loadFromFile(in: viewController )
                 },
                 completion2: {
-                    questionFactory.requestNextQuestion()
+                    questionFactory.loadFromMock()
                 },
                 completion3: {
                     alertPresenter.censelAllAlerts()
@@ -163,7 +168,7 @@ struct ErrorsHandler {
                     questionFactory.loadFromFile(in: viewController )
                 },
                 completion2: {
-                    questionFactory.requestNextQuestion()
+                    questionFactory.loadFromMock()
                 },
                 completion3: {
                     alertPresenter.censelAllAlerts()
@@ -187,7 +192,7 @@ struct ErrorsHandler {
                     questionFactory.loadFromFile(in: viewController )
                 },
                 completion2: {
-                    questionFactory.requestNextQuestion()
+                    questionFactory.loadFromMock()
                 },
                 completion3: {
                     alertPresenter.censelAllAlerts()

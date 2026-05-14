@@ -17,6 +17,9 @@ class QuestionFactory: QuestionFactoryProtocol {
     // Добавляем алертПрезентер в свойство класса иначе внутри класса глобальный не инициализируется, кроме того, его надо вызывать в главном потоке!
     private var alertPresenter = AlertPresenter()
     
+    // Слабая ссылка на контроллер (устраняет циклическую зависимость)
+    weak var movieQuizViewController: MovieQuizViewController?
+    
     weak var delegate: QuestionFactoryDelegate?
     // Мы объявляем делегат, функция requestNextQuestion теперь будет передавать вопрос делегату QuestionFactoryDelegate в функцию didReceiveNextQuestion(question:)
     
@@ -29,14 +32,34 @@ class QuestionFactory: QuestionFactoryProtocol {
     
     // MARK: - requestNextQuestion() функция формирует следующий вопрос
     func requestNextQuestion() {
-        guard let index = (0..<questionsFromFactory.count).randomElement() else {
-            delegate?.didReceiveNextQuestion(question: nil)
+        
+        guard let delegate = delegate else {
+            print("❌ Делегат не установлен!")
             return
         }
+        print("✅ Делегат установлен!")
+
+        
+        
+        guard let index = (0..<questionsFromFactory.count).randomElement() else {
+            return
+        }
+        print("index вопроса в фабрике", index)
         
         let question = questionsFromFactory[index]
-        delegate?.didReceiveNextQuestion(question: question)
+        print("question ->", question)
+        print("7  delegate?.didReceiveNextQuestion запускаем в фабрике QuestionFactory!")
+        DispatchQueue.main.async {
+            delegate.didReceiveNextQuestion(question)
+        }
     }
+    
+    // MARK: - loadFromMock() функция загрузки из массива
+    func loadFromMock() {
+        self.questionsFromFactory = questions
+        self.requestNextQuestion()
+    }
+    
     
     // MARK: - loadFromFile() функция загрузки из файла
     func loadFromFile(in viewController: UIViewController) {
@@ -63,6 +86,19 @@ class QuestionFactory: QuestionFactoryProtocol {
             
             // А. Создаем группу
             let dispatchGroup = DispatchGroup()
+            
+            DispatchQueue.main.async{
+                QueueSoundManage.shared.playSoundsInSequence(with: ["service", "loading"], fileExtension: "wav")
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                QueueSoundManage.shared.playSoundsInSequence(with: ["two", "minutes"], fileExtension: "wav")
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {
+                QueueSoundManage.shared.playSoundsInSequence(with: ["ten", "percent", "twenty", "percent", "thirty", "percent", "fourty", "percent", "fifty", "percent", "sixty", "percent", "seventy", "percent", "eighty", "percent", "ninety", "percent", "onehundred", "percent"], fileExtension: "wav")
+            }
+            
             
             // 5. Соберем массив вопросов questions из ДАТЫ
             for item in top250MoviesIMDB.items {
@@ -111,6 +147,7 @@ class QuestionFactory: QuestionFactoryProtocol {
                         print("Даты нет!")
                         return
                     }
+
                     
                     // 5.7 получаем картику и проверяем на ее наличие
                     guard let imageFromNetwork = UIImage(data: dataFromNetwork) else {
@@ -166,9 +203,15 @@ class QuestionFactory: QuestionFactoryProtocol {
         let request = URLRequest(url: url)
         print ("\n Запрос сделан")
         
+        // отвлечем разговорами пока грузится
+        DispatchQueue.main.async{
+            QueueSoundManage.shared.playSoundsInSequence(with: ["voice_on", "communications_on"], fileExtension: "wav")
+        }
+        
         // 3. Создаем задачу
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             print ("\n Задача запустилась!")
+         
             
             // 4. Обрабатываем ошибки
             if let error = error {
@@ -194,6 +237,18 @@ class QuestionFactory: QuestionFactoryProtocol {
                 return
             }
             print("\n data пришла -> \n", data)
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) {
+                QueueSoundManage.shared.playSoundsInSequence(with: ["service", "loading"], fileExtension: "wav")
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 9.0) {
+                QueueSoundManage.shared.playSoundsInSequence(with: ["two", "minutes"], fileExtension: "wav")
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 12.0) {
+                QueueSoundManage.shared.playSoundsInSequence(with: ["ten", "percent", "twenty", "percent", "thirty", "percent", "fourty", "percent", "fifty", "percent", "sixty", "percent", "seventy", "percent", "eighty", "percent", "ninety", "percent", "onehundred", "percent"], fileExtension: "wav")
+            }
             
             // 7. Парсим из даты данные в структуру
             do {

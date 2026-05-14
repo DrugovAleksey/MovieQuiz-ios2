@@ -6,6 +6,5 @@
 //
 
 protocol QuestionFactoryDelegate: AnyObject {
-    func didReceiveNextQuestion(question: QuizQuestion?)
-    func didLoadFromFile()
+    func didReceiveNextQuestion(_ question: QuizQuestion)
 }
