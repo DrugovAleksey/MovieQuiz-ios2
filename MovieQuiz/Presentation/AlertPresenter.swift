@@ -7,7 +7,7 @@
 import UIKit
 
 // 1. Создаем сам класс алерта который будет презентовать везде сообщения
-final class AlertPresenter {
+class AlertPresenter {
     
     // массив для запоминания алертов
     private var alertQueue: [AlertModel] = []
