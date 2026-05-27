@@ -14,6 +14,7 @@ struct AlertModel {
     var completion: () -> Void
     var completion2: (() -> Void)? // Опциональный второй обработчик
     var completion3: (() -> Void)? // Опциональный второй обработчик
+    var accessibilityId: String? // добавляем абилити алерта
 }
 
 // можно дописать и третью кнопку

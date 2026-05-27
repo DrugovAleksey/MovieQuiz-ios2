@@ -77,7 +77,8 @@ struct ErrorsHandler {
                 },
                 completion3: {
                     alertPresenter.censelAllAlerts()
-                }
+                },
+                accessibilityId: "Ошибка!"
             )
         case .invalidURL:
             
@@ -101,7 +102,8 @@ struct ErrorsHandler {
                 },
                 completion3: {
                     alertPresenter.censelAllAlerts()
-                }
+                },
+                accessibilityId: "Ошибка!"
             )
         case .invalidRequest(let details):
             if alertActive == false {
@@ -125,7 +127,8 @@ struct ErrorsHandler {
                 },
                 completion3: {
                     alertPresenter.censelAllAlerts()
-                }
+                },
+                accessibilityId: "Ошибка!"
             )
         case .noData:
             if alertActive == false {
@@ -148,7 +151,8 @@ struct ErrorsHandler {
                 },
                 completion3: {
                     alertPresenter.censelAllAlerts()
-                }
+                },
+                accessibilityId: "Ошибка!"
             )
         case .invalidJSON(let details):
             if alertActive == false {
@@ -172,7 +176,8 @@ struct ErrorsHandler {
                 },
                 completion3: {
                     alertPresenter.censelAllAlerts()
-                }
+                },
+                accessibilityId: "Ошибка!"
             )
         case .unknown(let details):
             if alertActive == false {
@@ -196,7 +201,8 @@ struct ErrorsHandler {
                 },
                 completion3: {
                     alertPresenter.censelAllAlerts()
-                }
+                },
+                accessibilityId: "Ошибка!"
             )
         }
     }

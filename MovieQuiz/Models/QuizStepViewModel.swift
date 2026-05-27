@@ -13,3 +13,12 @@ struct QuizStepViewModel {
     let question: String
     let questionNumber: String
 }
+
+// Расширение для теста QuizStepViewModelTests
+extension QuizStepViewModel {
+    init(model: QuizQuestion) {
+        self.image = model.image
+        self.question = model.text
+        self.questionNumber = "1/10" // или логика для вычисления номера
+    }
+}
