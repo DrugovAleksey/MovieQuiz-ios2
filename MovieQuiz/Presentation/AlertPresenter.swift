@@ -31,7 +31,7 @@ class AlertPresenter {
         let alert = UIAlertController(
             title: model.title,     // заголовок
             message: model.message, // описание
-            preferredStyle: .alert  // представление либо .alert, либо actionSheet
+            preferredStyle: .alert,  // представление либо .alert, либо actionSheet
         )
         
         // 4. задаем кнопки (это ПЕРВАЯ кнопка)
@@ -62,6 +62,7 @@ class AlertPresenter {
                 self.showNextAlert(in: vc)
             }
             alert.addAction(action2) // добавляем вторую кнопку
+        
         }
         // 7. Выводим это теперь на экран
         vc.present(alert, animated: true, completion: nil)

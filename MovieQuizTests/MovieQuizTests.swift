@@ -6,6 +6,7 @@
 //
 import XCTest
 import Testing
+@testable import MovieQuiz
 
 struct ArithmeticOperations {
     func addition(num1: Int, num2: Int) -> Int {
@@ -103,6 +104,22 @@ class MovieQuizTestsClass : XCTestCase {
         waitForExpectations(timeout: 2)
     }
 }
+
+class QuizStepViewModelTests: XCTestCase {
+    func testConvertModelToViewModel() {
+        // Given
+        let quizQuestion = questions[0]
+        
+        // When
+        let quizStepViewModel = QuizStepViewModel(model: quizQuestion)
+        
+        // Then
+        XCTAssertTrue(quizStepViewModel.image === quizQuestion.image, "Изображение должно быть тем же объектом")
+        XCTAssertEqual(quizStepViewModel.question, quizQuestion.text, "Текст вопроса должен совпадать")
+        XCTAssertEqual(quizStepViewModel.questionNumber, "1/10", "Номер вопроса должен быть '1/10'")
+    }
+}
+
 
 /*
 XCTAssertNotEqual — сравниваем два результата и ожидаем, что они не равны

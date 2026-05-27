@@ -75,21 +75,58 @@ class MovieQuizUITests: XCTestCase {
     
     // 7. Создаем метод проверки смены постера при нажатии на кнопку да или нет
     func testYesButton() {
-        sleep(93)
-
-        let firstPoster = app.images["Poster"] // находим первоначальный постер
-
-        app.buttons["Yes"].tap() // находим кнопку "да" и нажимаем ее
-        sleep(3)
-
-        let secondPoster = app.images["Poster"]
+        // 1. Выполняем действие, которое вызывает алерт (ошибка сети)
+        // Грузим данные из сети и ждем ошибку или загрузку
         
+        // 2. Ждём появления алерта
+        let alertAppears = expectation(
+            for: NSPredicate(format: "exists == 1"),
+            evaluatedWith: app.alerts["Ошибка!"],
+            handler: nil
+        )
+        // в течение 120 секунд либо загрузится из сети, если сервак работает, либо выкинет алерт и тогда запустим мок-данные
+        waitForExpectations(timeout: 120) { error in
+            if let error = error {
+                XCTFail("Алерт не появился: \(error)")
+            }
+        }
+        
+        // 3. Нажимаем кнопку в алерт
+        app.alerts["Ошибка!"].buttons["Запустить МОК-данные."].tap()
+        
+        // 4. Ждём стабилизации UI после закрытия алерта
+        let posterAppears = expectation(
+            for: NSPredicate(format: "exists == 1"),
+            evaluatedWith: app.images["Poster"],
+            handler: nil
+        )
+        waitForExpectations(timeout: 5) { error in
+            if let error = error {
+                XCTFail("Постер не загрузился: \(error)")
+            }
+        }
+
+        let firstPoster = app.images["Poster"] // находим первоначальный постер
+        let firstPosterData = firstPoster.screenshot().pngRepresentation
+
+        print("первый постер", firstPoster)
+        
+        app.buttons["Yes"].tap() // находим кнопку "да" и нажимаем ее
+            print("Нажали кнопку Да")
+        sleep(3)
+        
+        let secondPoster = app.images["Poster"]
+        print("второй постер", secondPoster)
+
         XCTAssertTrue(firstPoster.exists)
+        print("Первый постер существует", firstPoster.exists)
+        
         XCTAssertTrue(secondPoster.exists)
+        print("Второй постер существует", secondPoster.exists)
+
         XCTAssertFalse(firstPoster == secondPoster) // проверяем, что постеры разные
         
         // преобразуем изображения постеров в их данные и посчитаем
-        let firstPosterData = firstPoster.screenshot().pngRepresentation
         let secondPosterData = secondPoster.screenshot().pngRepresentation
         
         // проверяем совпадают ли данные до байта
@@ -100,45 +137,115 @@ class MovieQuizUITests: XCTestCase {
         // можно проверить меняется ли лейбл с номером вопроса
         // лейблы, как и картинки, кнопки и все остальное можно получить из XCUIApplication
         let indexLabel = app.staticTexts["Index"]
-        
+        print ("Index будет ->", indexLabel.label)
         XCTAssertEqual(indexLabel.label, "2/10")
     }
     
     func testBadonButton() {
-        sleep(123)
-
+        // 1. Выполняем действие, которое вызывает алерт (ошибка сети)
+        // Грузим данные из сети и ждем ошибку или загрузку
+        
+        // 2. Ждём появления алерта
+        let alertAppears = expectation(
+            for: NSPredicate(format: "exists == 1"),
+            evaluatedWith: app.alerts["Ошибка!"],
+            handler: nil
+        )
+        // в течение 120 секунд либо загрузится из сети, если сервак работает, либо выкинет алерт и тогда запустим мок-данные
+        waitForExpectations(timeout: 120) { error in
+            if let error = error {
+                XCTFail("Алерт не появился: \(error)")
+            }
+        }
+        
+        // 3. Нажимаем кнопку в алерт
+        app.alerts["Ошибка!"].buttons["Запустить МОК-данные."].tap()
+        
+        // 4. Ждём стабилизации UI после закрытия алерта
+        let posterAppears = expectation(
+            for: NSPredicate(format: "exists == 1"),
+            evaluatedWith: app.images["Poster"],
+            handler: nil
+        )
+        waitForExpectations(timeout: 5) { error in
+            if let error = error {
+                XCTFail("Постер не загрузился: \(error)")
+            }
+        }
+        
         let firstPoster = app.images["Poster"] // находим первоначальный постер
-
+        print("firstPoster", firstPoster)
+        
+        let firstPosterData = firstPoster.screenshot().pngRepresentation
+        sleep(2)
+        
         app.buttons["Yes"].tap() // находим кнопку "да" и нажимаем ее
-        sleep(33)
-
+        sleep(2)
+        print("buttons Yes")
+        
         let secondPoster = app.images["Poster"]
+        sleep(2)
+        print("secondPoster", secondPoster)
         
         // преобразуем изображения постеров в их данные и посчитаем
-        let firstPosterData = firstPoster.screenshot().pngRepresentation
         let secondPosterData = secondPoster.screenshot().pngRepresentation
-        
+        sleep(2)
         // проверяем совпадают ли данные до байта
-       // XCTAssertFalse(firstPosterData == secondPosterData)
+        // XCTAssertFalse(firstPosterData == secondPosterData)
         // или так проверить можно
         XCTAssertNotEqual(firstPosterData, secondPosterData)
+        sleep(2)
+        print("XCTAssertNotEqual(firstPosterData, secondPosterData)")
         
         // можно проверить меняется ли лейбл с номером вопроса
         // лейблы, как и картинки, кнопки и все остальное можно получить из XCUIApplication
         let indexLabel = app.staticTexts["Index"]
+        sleep(2)
+        print("indexLabel", indexLabel)
         
         XCTAssertEqual(indexLabel.label, "2/10")
+        sleep(2)
+        print("XCTAssertEqual(indexLabel.label, 2/10")
     }
-    
     
     // 8. Тестируем кнопку Нет
     func testNoButton() {
-        sleep(123)
+        // 1. Выполняем действие, которое вызывает алерт (ошибка сети)
+        // Грузим данные из сети и ждем ошибку или загрузку
+        
+        // 2. Ждём появления алерта
+        let alertAppears = expectation(
+            for: NSPredicate(format: "exists == 1"),
+            evaluatedWith: app.alerts["Ошибка!"],
+            handler: nil
+        )
+        // в течение 120 секунд либо загрузится из сети, если сервак работает, либо выкинет алерт и тогда запустим мок-данные
+        waitForExpectations(timeout: 120) { error in
+            if let error = error {
+                XCTFail("Алерт не появился: \(error)")
+            }
+        }
+        
+        // 3. Нажимаем кнопку в алерт
+        app.alerts["Ошибка!"].buttons["Запустить МОК-данные."].tap()
+        
+        // 4. Ждём стабилизации UI после закрытия алерта
+        let posterAppears = expectation(
+            for: NSPredicate(format: "exists == 1"),
+            evaluatedWith: app.images["Poster"],
+            handler: nil
+        )
+        waitForExpectations(timeout: 5) { error in
+            if let error = error {
+                XCTFail("Постер не загрузился: \(error)")
+            }
+        }
+        
         let firstPoster = app.images["Poster"]
         let firstPosterData = firstPoster.screenshot().pngRepresentation
 
         app.buttons["No"].tap()
-        sleep(33)
+        sleep(3)
         
         let secondPoster = app.images["Poster"]
         let secondPosterData = secondPoster.screenshot().pngRepresentation
@@ -148,4 +255,111 @@ class MovieQuizUITests: XCTestCase {
         XCTAssertNotEqual(firstPosterData, secondPosterData)
         XCTAssertEqual(indexLabel.label, "2/10")
     }
+    
+    // 9. Тест Алерта
+    func testAlert() {
+        // 1. Выполняем действие, которое вызывает алерт (ошибка сети)
+        // Грузим данные из сети и ждем ошибку или загрузку
+        
+        // 2. Ждём появления алерта
+        let alertAppears = expectation(
+            for: NSPredicate(format: "exists == 1"),
+            evaluatedWith: app.alerts["Ошибка!"],
+            handler: nil
+        )
+        // в течение 120 секунд либо загрузится из сети, если сервак работает, либо выкинет алерт и тогда запустим мок-данные
+        waitForExpectations(timeout: 90) { error in
+            if let error = error {
+                print("Алерт не появился за 90 секунд: \(error) — продолжаем выполнение")
+            }
+        }
+        if app.alerts.count == 1 {
+            // 3. Нажимаем кнопку в алерт
+            app.alerts["Ошибка!"].buttons["Запустить МОК-данные."].tap()
+        }
+        
+        
+        // 4. Ждём стабилизации UI после закрытия алерта
+        let posterAppears = expectation(
+            for: NSPredicate(format: "exists == 1"),
+            evaluatedWith: app.images["Poster"],
+            handler: nil
+        )
+        waitForExpectations(timeout: 5) { error in
+            if let error = error {
+                XCTFail("Постер не загрузился: \(error)")
+            }
+        }
+        
+        for _ in 0..<10 {
+            sleep (2)
+            self.app.buttons["No"].tap()
+        }
+        
+        sleep(6)
+        
+        let alert = app.alerts["Раунд окончен"]
+        XCTAssertTrue(alert.exists)
+        XCTAssertTrue(alert.label == "Раунд окончен")
+        XCTAssertTrue(alert.buttons.firstMatch.label == "Сыграть еще раз.")
+    }
+    
+    func testAlertDismiss() {
+        // 1. Выполняем действие, которое вызывает алерт (ошибка сети)
+        // Грузим данные из сети и ждем ошибку или загрузку
+        
+        // 2. Ждём появления алерта
+        let alertAppears = expectation(
+            for: NSPredicate(format: "exists == 1"),
+            evaluatedWith: app.alerts["Ошибка!"],
+            handler: nil
+        )
+        // в течение 120 секунд либо загрузится из сети, если сервак работает, либо выкинет алерт и тогда запустим мок-данные
+        waitForExpectations(timeout: 90) { error in
+            if let error = error {
+                XCTFail("Постер не загрузился: \(error)")
+            }
+        }
+        
+        // 3. Нажимаем кнопку в алерт
+        app.alerts["Ошибка!"].buttons["Запустить МОК-данные."].tap()
+        
+        // 4. Ждём стабилизации UI после закрытия алерта
+        let posterAppears = expectation(
+            for: NSPredicate(format: "exists == 1"),
+            evaluatedWith: app.images["Poster"],
+            handler: nil
+        )
+
+        
+        for _ in 0..<10 {
+            sleep (2)
+            app.buttons["No"].tap()
+        }
+       
+        
+//        let alert = app.alerts["GameResult"]
+//        alert.firstMatch.buttons["Сыграть еще раз."].firstMatch.tap()
+        
+        let alertResult = app.alerts["Раунд окончен"]
+        let alert = expectation(
+            for: NSPredicate(format: "exists == 1"),
+            evaluatedWith: app.alerts["Раунд окончен"],
+            handler: nil
+        )
+        waitForExpectations(timeout: 10) { error in
+            if let error = error {
+                XCTFail("AlertResult не загрузился: \(error)")
+            }
+        }
+
+        // 3. Нажимаем кнопку в алерт
+        app.alerts["Раунд окончен"].buttons["Сыграть еще раз."].tap()
+        XCTAssertFalse(alertResult.exists)
+
+        let indexLabel = app.staticTexts["Index"]
+        XCTAssertTrue(indexLabel.label == "1/10")
+    }
 }
+
+

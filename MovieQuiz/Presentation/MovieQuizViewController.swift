@@ -22,6 +22,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     @IBAction func yesButtonClicked(_ sender: Any) {
         movieQuizPresenter.yesButtonClicked()
+        print("Кнопка Да нажата")
     }
     
     @IBAction func noButtonClicked(_ sender: Any) {
@@ -75,7 +76,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         print("✅ Фабрика создана: \(questionFactory != nil ? "Да" : "Нет")")
         
         // Ниже источники данных. Выбираем один остальные коментируем.
-        //questionFactory.requestNextQuestion()  // Источник данных - МОК!
+        // questionFactory.requestNextQuestion()  // Источник данных - МОК!
         //questionFactory.loadFromFile(in: self) // Источник данных - Файл!
         questionFactory.loadFromNetwork(in: self) // Источник данных - Сеть!
     }
@@ -150,9 +151,9 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             "Средняя точность: \(String(format: "%.2f", statisticService.totalAccuracy))%", // Сообщение
             buttonText: "Сыграть еще раз.",
             buttonText2: "Сброс статистики.",
-            completion: {
+            completion: { [self] in
                 print("Кнопка Сыграть еще раз нажата!")
-                self.movieQuizPresenter.resetQuiz()
+                movieQuizPresenter.resetQuiz()
                 
                 QueueSoundManage.shared.playSoundsInSequence(with: ["accepted"], fileExtension: "wav")
             },
@@ -161,7 +162,8 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
                 self.movieQuizPresenter.resetStatistic()
                 
                 QueueSoundManage.shared.playSoundsInSequence(with: ["accepted"], fileExtension: "wav")
-            }
+            },
+            accessibilityId: "Раунд окончен"
         )
         alertPresenter.alert(in: self, model: model)
     }
